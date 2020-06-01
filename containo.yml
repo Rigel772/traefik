@@ -1,0 +1,19 @@
+version: "3.3"
+
+services:
+  traefik:
+    image: "traefik:v2.0.0"
+    command:
+      - --entrypoints.web.address=:80
+      - --providers.docker=true
+      - --api.insecure
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+  
+  biostrefa:
+    image: containous/whoami:v1.3.0
+    labels:
+        - traefik.http.routers.biostrefa.rule=Host(`biostrefa.org`)

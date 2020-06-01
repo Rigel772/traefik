@@ -1,0 +1,46 @@
+version: "3.3"
+
+services:
+  traefik:
+    image: "traefik:v2.2"
+    command:
+      - --entrypoints.web.address=:80
+      - --providers.docker=true
+      - --api.insecure
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - public
+  
+  bio:
+    image: nginx
+    volumes: 
+        - /sites/bio/www:/usr/share/nginx/html
+    labels:
+        - traefik.http.routers.bio.rule=Host(`biostrefa.org`)
+    networks:
+      - public
+  avizi:
+    image: nginx
+    volumes: 
+        - /sites/avizi/www:/usr/share/nginx/html
+    labels:
+        - traefik.http.routers.avizi.rule=Host(`avizi.org`)
+    networks:
+      - public
+  api:
+    image: containous/whoami:v1.3.0
+    command:
+      - --port=1337 # Our service listens on 1337
+    labels:
+      - traefik.http.routers.api.rule=Host(`api.avizi.org`)
+      - traefik.http.services.api.loadbalancer.server.port=1337
+    networks:
+      - public
+
+networks:
+  public:
+    external: true
