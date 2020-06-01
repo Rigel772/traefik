@@ -2,13 +2,13 @@ version: "3.3"
 
 services:
   traefik:
-    image: "traefik:v2.2"
+    image: "traefik:v2.2.1"
     command:
       - "--log.level=DEBUG"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--providers.docker=true"
-      - "--api"
+      - "--api.insecure"
       - "--providers.docker.exposedbydefault=false"
       - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
       - "--certificatesresolvers.myresolver.acme.email=oskar@polishlink.info"
@@ -23,20 +23,21 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "/sites/letsencrypt:/letsencrypt"
-    labels:
-      # global redirect to https
-      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
-      - "traefik.http.routers.http-catchall.entrypoints=web"
-      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+    #labels:
       # middleware redirect
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      # Dashboard
+      # - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      # # global redirect to https
+      # - "traefik.http.routers.redirs.rule=hostregexp(`{host:.+}`)"
+      # - "traefik.http.routers.redirs.entrypoints=web"
+      # - "traefik.http.routers.redirs.middlewares=redirect-to-https@docker"
+      # # Dashboard
       # - "traefik.http.routers.traefik.rule=Host(`traefik.avizi.org`)"
       # - "traefik.http.routers.traefik.service=api@internal"
       # - "traefik.http.routers.traefik.middlewares=admin"
       # - "traefik.http.routers.traefik.tls.certresolver=myresolver"
       # - "traefik.http.routers.traefik.entrypoints=websecure"
       #- "traefik.http.middlewares.admin.basicauth.users=admin:xxx"
+      
     networks:
       - public
   
@@ -48,11 +49,26 @@ services:
         - /sites/bio/www:/usr/share/nginx/html
     deploy:
       labels:
+          # enable Traefik for container
           - "traefik.enable=true"
+          # middleware to redirect trafic to https
+          - "traefik.http.middlewares.bio-https.redirectscheme.scheme=https"
+          #" http-bio" router to listen on "web" entrypoint
+          - "traefik.http.routers.bio-http.entrypoints=web"
+          # hostname fot the site on "bio-http" router
+          - "traefik.http.routers.bio-http.rule=Host(`biostrefa.org`)"
+          # tell the router to use redirect middleware defined above
+          - "traefik.http.routers.bio-http.middlewares=bio-https@docker"
+          # "bio" router hostname
           - "traefik.http.routers.bio.rule=Host(`biostrefa.org`)"
-          - "traefik.http.services.bio.loadbalancer.server.port=80"
+          # where router should be listening
           - "traefik.http.routers.bio.entrypoints=websecure"
+          # tell "bio" router to terminate SSL requests
+          - "traefik.http.routers.bio.tls=true"
+          # the router should use LetsEncrypt configuration defined in Traefik
           - "traefik.http.routers.bio.tls.certresolver=myresolver"
+          # necessary for docker
+          - "traefik.http.services.bio.loadbalancer.server.port=80"
     networks:
       - public
   avizi:
@@ -63,13 +79,59 @@ services:
         - /sites/avizi/www:/usr/share/nginx/html
     deploy:
       labels:
+          # enable Traefik for container
           - "traefik.enable=true"
+          # middleware to redirect trafic to https
+          - "traefik.http.middlewares.avizi-https.redirectscheme.scheme=https"
+          #" http-avizi" router to listen on "web" entrypoint
+          - "traefik.http.routers.avizi-http.entrypoints=web"
+          # hostname fot the site on "avizi-http" router
+          - "traefik.http.routers.avizi-http.rule=Host(`avizi.org`)"
+          # tell the router to use redirect middleware defined above
+          - "traefik.http.routers.avizi-http.middlewares=avizi-https@docker"
+          # "avizi" router hostname
           - "traefik.http.routers.avizi.rule=Host(`avizi.org`)"
-          - "traefik.http.services.avizi.loadbalancer.server.port=80"
+          # where router should be listening
           - "traefik.http.routers.avizi.entrypoints=websecure"
+          # tell "avizi" router to terminate SSL requests
+          - "traefik.http.routers.avizi.tls=true"
+          # the router should use LetsEncrypt configuration defined in Traefik
           - "traefik.http.routers.avizi.tls.certresolver=myresolver"
+          # necessary for docker
+          - "traefik.http.services.avizi.loadbalancer.server.port=80"
     networks:
       - public
+  transraf:
+    image: nginx
+    #command:
+      #- --port=80
+    volumes: 
+        - /sites/transraf/www:/usr/share/nginx/html
+    deploy:
+      labels:
+          # enable Traefik for container
+          - "traefik.enable=true"
+          # middleware to redirect trafic to https
+          - "traefik.http.middlewares.transraf-https.redirectscheme.scheme=https"
+          #" http-transraf" router to listen on "web" entrypoint
+          - "traefik.http.routers.transraf-http.entrypoints=web"
+          # hostname fot the site on "transraf-http" router
+          - "traefik.http.routers.transraf-http.rule=Host(`transraf.com`)"
+          # tell the router to use redirect middleware defined above
+          - "traefik.http.routers.transraf-http.middlewares=transraf-https@docker"
+          # "transraf" router hostname
+          - "traefik.http.routers.transraf.rule=Host(`transraf.com`)"
+          # where router should be listening
+          - "traefik.http.routers.transraf.entrypoints=websecure"
+          # tell "transraf" router to terminate SSL requests
+          - "traefik.http.routers.transraf.tls=true"
+          # the router should use LetsEncrypt configuration defined in Traefik
+          - "traefik.http.routers.transraf.tls.certresolver=myresolver"
+          # necessary for docker
+          - "traefik.http.services.transraf.loadbalancer.server.port=80"
+    networks:
+      - public
+  
   api:
     image: containous/whoami:v1.3.0
     command:
@@ -77,10 +139,20 @@ services:
     deploy:
       labels:
         - "traefik.enable=true"
+        # middleware to redirect trafic to https
+        - "traefik.http.middlewares.api-https.redirectscheme.scheme=https"
+        #" http-avizi" router to listen on "web" entrypoint
+        - "traefik.http.routers.api-http.entrypoints=web"
+        # hostname fot the site on "avizi-http" router
+        - "traefik.http.routers.api-http.rule=Host(`api.avizi.org`)"
+        # tell the router to use redirect middleware defined above
+        - "traefik.http.routers.api-http.middlewares=avizi-https@docker"
         - "traefik.http.routers.api.rule=Host(`api.avizi.org`)"
-        - "traefik.http.services.api.loadbalancer.server.port=1337"
+        - "traefik.http.routers.api.tls=true"
         - "traefik.http.routers.api.entrypoints=websecure"
+
         - "traefik.http.routers.api.tls.certresolver=myresolver"
+        - "traefik.http.services.api.loadbalancer.server.port=1337"
     networks:
       - public
 
