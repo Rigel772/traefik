@@ -5,24 +5,38 @@ services:
     image: "traefik:v2.2"
     command:
       - "--log.level=DEBUG"
-      #- "--entrypoints.web.address=:80"
-      - "--providers.docker=true"
-      - "--api.insecure"
-      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--providers.docker=true"
+      - "--api"
+      - "--providers.docker.exposedbydefault=false"
       - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
       - "--certificatesresolvers.myresolver.acme.email=oskar@polishlink.info"
       - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
       #swarm
       - "--providers.docker.swarmmode=true"
     ports:
-      #- "80:80"
+      - "80:80"
       - "443:443"
       - "8080:8080"
     
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "/sites/letsencrypt:/letsencrypt"
+    labels:
+      # global redirect to https
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      # middleware redirect
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      # Dashboard
+      # - "traefik.http.routers.traefik.rule=Host(`traefik.avizi.org`)"
+      # - "traefik.http.routers.traefik.service=api@internal"
+      # - "traefik.http.routers.traefik.middlewares=admin"
+      # - "traefik.http.routers.traefik.tls.certresolver=myresolver"
+      # - "traefik.http.routers.traefik.entrypoints=websecure"
+      #- "traefik.http.middlewares.admin.basicauth.users=admin:xxx"
     networks:
       - public
   
